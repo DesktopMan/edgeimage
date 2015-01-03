@@ -2,8 +2,8 @@
 
 # Internal script config
 DEV=/dev/loop0
-BOOT=/dev/loop0p1
-ROOT=/dev/loop0p2
+BOOT=${DEV}p1
+ROOT=${DEV}p2
 BOOT_MNT_DIR=/tmp/edgeboot
 ROOT_MNT_DIR=/tmp/edgeroot
 TMP_DIR=/tmp/edgetmp
@@ -37,11 +37,18 @@ SQUASHFS=squashfs.img
 SQUASHFS_MD5=squashfs.img.md5
 VERSION=version
 
-PARTED=/sbin/parted
+function check {
+	if [ $? -ne 0 ]; then
+		echo "Error: $1"
+		cleanup
+		exit 1
+	fi
+}
 
 function cleanup {
 	if [ "$1" = "all" ]; then
 		rm -f $OUTPUT_FILE
+		rm -f $OUTPUT_FILE.gz
 	fi
 
 	umount $BOOT_MNT_DIR 2>/dev/null
@@ -52,15 +59,6 @@ function cleanup {
 	rm -rf $TMP_DIR
 
 	losetup -d $DEV 2>/dev/null
-}
-
-function check {
-
-	if [ $? -ne 0 ]; then
-		echo "Error: $1"
-		cleanup
-		exit
-	fi
 }
 
 # Cleanup
@@ -92,12 +90,12 @@ check "Failed creating loop device"
 
 # Remove everything
 echo "Re-creating partition table..."
-$PARTED --script $DEV mktable msdos
+parted --script $DEV mktable msdos
 check "Failed creating partition table"
 
 # Boot
 echo "Creating boot partition..."
-$PARTED --script $DEV mkpart primary fat32 1 150MB
+parted --script $DEV mkpart primary fat32 1 150MB
 check "Failed creating boot partition"
 
 echo "Formatting boot partition..."
@@ -106,7 +104,7 @@ check "Failed formatting boot partition"
 
 # Root
 echo "Creating root partition..."
-$PARTED --script $DEV mkpart primary ext3 150MB 1900MB
+parted --script $DEV mkpart primary ext3 150MB 1900MB
 check "Failed creating root partition"
 
 echo "Formatting root partition..."
@@ -131,8 +129,9 @@ tar xf $FIRMWARE_FILE -C $TMP_DIR
 # The kernel
 echo "Verifying EdgeOS kernel..."
 if [ `md5sum $TMP_DIR/$KERNEL_ORIG | awk -F ' ' '{print $1}'` != `cat $TMP_DIR/$KERNEL_ORIG_MD5` ]; then
-    echo "Kernel from your image is corrupted! Check your image and start over."
-    exit 1
+	echo "Kernel from your image is corrupted! Check your image and start over."
+	cleanup
+	exit 1
 fi
 
 echo "Copying EdgeOS kernel to boot partition..."
@@ -142,8 +141,9 @@ cp $TMP_DIR/$KERNEL_ORIG_MD5 $BOOT_MNT_DIR/$KERNEL_MD5
 # The image
 echo "Verifying EdgeOS system image..."
 if [ `md5sum $TMP_DIR/$SQUASHFS_ORIG | awk -F ' ' '{print $1}'` != `cat $TMP_DIR/$SQUASHFS_MD5_ORIG` ]; then
-    echo "System image from your image is corrupted! Check your image and start over."
-    exit 1
+	echo "System image from your image is corrupted! Check your image and start over."
+	cleanup
+	exit 1
 fi
 
 echo "Copying EdgeOS system image to root partition..."
