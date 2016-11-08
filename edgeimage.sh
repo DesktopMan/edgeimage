@@ -8,12 +8,12 @@ BOOT_MNT_DIR=/tmp/edgeboot
 ROOT_MNT_DIR=/tmp/edgeroot
 TMP_DIR=/tmp/edgetmp
 W_DIR=w
-FIRMWARE_FILE=$1
-OUTPUT_FILE=$2
-OUTPUT_SIZE=$3
+FIRMWARE_FILE="$1"
+OUTPUT_FILE="$2"
+OUTPUT_SIZE="$3"
 
 # Check parameters
-if [ "$FIRMWARE_FILE" = "" ] || [ "$OUTPUT_FILE" = "" ] || [ "$OUTPUT_SIZE" = "" ]; then
+if [ "$FIRMWARE_FILE" = "" ] || [ "$OUTPUT_FILE" = "" ] || [ "$OUTPUT_SIZE" = "" ]; then
 	echo "Usage: ./edgeimage.sh <input firmware> <output image> <image size (MB)>"
 	exit 0
 fi
